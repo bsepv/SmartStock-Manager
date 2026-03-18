@@ -11,6 +11,6 @@ Este sistema busca optimizar el control de existencias mediante análisis de dat
 
 ## 📋 Estado del proyecto:
 - [x] Configuración inicial del repositorio.
-- [ ] Diseño de Base de Datos (E-R).
-- [ ] Configuración del servidor Backend.
+- [x] Diseño de Base de Datos (E-R).
+- [x] Configuración del servidor Backend.
 - [ ] Desarrollo de Interfaz de Usuario.

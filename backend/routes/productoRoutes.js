@@ -111,4 +111,25 @@ router.put('/:id/stock', async (req, res) => {
         res.status(500).send("Error al actualizar stock");
     }
 });
+
+// Incrementar stock por SKU (Ingreso de bodega)
+router.put('/ingreso-bodega', async (req, res) => {
+    try {
+        const { sku, cantidad } = req.body;
+        
+        const resultado = await pool.query(
+            "UPDATE productos SET stock_actual = stock_actual + $1 WHERE sku = $2 RETURNING *",
+            [cantidad, sku]
+        );
+
+        if (resultado.rows.length === 0) {
+            return res.status(404).json({ mensaje: "Producto no encontrado" });
+        }
+
+        res.json({ mensaje: "Stock actualizado", producto: resultado.rows[0] });
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Error al actualizar bodega");
+    }
+});
 module.exports = router;
