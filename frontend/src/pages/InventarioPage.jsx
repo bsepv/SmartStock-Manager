@@ -4,10 +4,10 @@ import { Package, LogOut, Plus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Trash2, Search, AlertTriangle } from "lucide-react";
 
+
 const InventarioPage = () => {
     const [productos, setProductos] = useState([]);
     const navigate = useNavigate();
-    const usuario = JSON.parse(localStorage.getItem('usuario'));
     const [isModalOpen, setIsModalOpen] = useState(false);
     //modal de nuevo producto
     const [categorias, setCategorias] = useState([]);
@@ -180,19 +180,6 @@ const InventarioPage = () => {
 
     return (
         <div className="min-h-screen bg-gray-100">
-            {/* Navbar superior */}
-            <nav className="bg-white shadow-sm px-8 py-4 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                    <Package className="text-blue-600" />
-                    <h1 className="text-xl font-bold text-gray-800">SmartStock-Manager</h1>
-                </div>
-                <div className="flex items-center gap-4">
-                    <span className="text-sm text-gray-600">Hola, <b>{usuario?.nombre}</b></span>
-                    <button onClick={handleLogout} className="text-gray-500 hover:text-red-600 transition-colors">
-                        <LogOut size={20} />
-                    </button>
-                </div>
-            </nav>
 
             <main className="p-8">
                 <div className="flex justify-between items-center mb-6">
