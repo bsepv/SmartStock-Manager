@@ -23,7 +23,7 @@ const LoginPage = () => {
             localStorage.setItem('token', respuesta.data.token);
             localStorage.setItem('usuario', JSON.stringify(respuesta.data.usuario));
 
-            navigate('/dashboard');
+            navigate('/panelcontrol');
 
         } catch (err) {
             // Si el backend da error (401), mostramos el mensaje
