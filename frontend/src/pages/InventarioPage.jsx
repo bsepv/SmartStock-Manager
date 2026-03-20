@@ -29,6 +29,13 @@ const InventarioPage = () => {
     const [busqueda, setBusqueda] = useState('');
     const [filtroStockBajo, setFiltroStockBajo] = useState(false);
 
+    //nueva categoria
+    const [mostrarNuevaCategoria, setMostrarNuevaCategoria] = useState(false);
+    const [nuevaCategoria, setNuevaCategoria] = useState({
+        nombre: '',
+        descripcion: ''
+    });
+
     useEffect(() => {
         const fetchProductos = async () => {
             try {
@@ -68,7 +75,6 @@ const InventarioPage = () => {
     }, [isModalOpen, skuNoExistente]);
 
     //funcion para enviar el ingreso de bodega
-
     const manejarIngresoBodega = async (e) => {
         e.preventDefault();
         try {
@@ -173,6 +179,21 @@ const InventarioPage = () => {
         return coincideBusqueda && coincideStock;
     });
 
+    const crearCategoriaRapida = async () => {
+        const nombre = prompt("Nombre de la nueva categoría:");
+        if (nombre) {
+            try {
+                const res = await api.post('/productos/categorias', { nombre });
+                // 1. Refrescamos la lista de categorías del estado para que aparezca en el select
+                setCategorias([...categorias, res.data]);
+                // 2. La seleccionamos automáticamente para el producto actual
+                setNuevoProducto({ ...nuevoProducto, categoria_id: res.data.id });
+            } catch (err) {
+                alert("Error al crear categoría");
+            }
+        }
+    };
+
     const handleLogout = () => {
         localStorage.clear();
         navigate('/login');
@@ -180,13 +201,11 @@ const InventarioPage = () => {
 
     return (
         <div className="min-h-screen bg-gray-100">
-
             <main className="p-8">
                 <div className="flex justify-between items-center mb-6">
                     <h2 className="text-2xl font-semibold text-gray-700">Inventario Actual</h2>
 
                     <div className="flex gap-3">
-                        {/* NUEVO BOTÓN: INGRESO DE BODEGA */}
                         <button
                             onClick={() => setIsIngresoOpen(true)}
                             className="bg-green-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-green-700 transition-colors shadow-sm"
@@ -195,7 +214,6 @@ const InventarioPage = () => {
                             Ingreso Bodega
                         </button>
 
-                        {/* BOTÓN EXISTENTE: NUEVO PRODUCTO */}
                         <button
                             onClick={() => setIsModalOpen(true)}
                             className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors shadow-sm"
@@ -206,11 +224,8 @@ const InventarioPage = () => {
                     </div>
                 </div>
 
-                {/* Tabla de Productos */}
                 <div className="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-200">
                     <div className="bg-white p-4 rounded-xl shadow-sm mb-6 flex flex-col md:flex-row gap-4 items-center justify-between border border-gray-100">
-
-                        {/* Buscador de Texto */}
                         <div className="relative w-full md:w-96">
                             <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
                                 <Search size={18} />
@@ -224,10 +239,8 @@ const InventarioPage = () => {
                             />
                         </div>
 
-                        {/* Filtros Rápidos */}
                         <div className="flex items-center gap-4">
                             <label className="inline-flex items-center cursor-pointer">
-
                                 <input
                                     type="checkbox"
                                     className="sr-only peer"
@@ -235,12 +248,14 @@ const InventarioPage = () => {
                                     onChange={() => setFiltroStockBajo(!filtroStockBajo)}
                                 />
 
-                                <div className="relative w-11 h-6 bg-gray-200 rounded-full peer 
-      peer-checked:bg-red-600 transition-colors"
+                                <div
+                                    className="relative w-11 h-6 bg-gray-200 rounded-full peer 
+                                peer-checked:bg-red-600 transition-colors"
                                 >
-                                    <div className="absolute top-[2px] left-[2px] bg-white border border-gray-300 rounded-full h-5 w-5 transition-all
-        peer-checked:translate-x-[20px]">
-                                    </div>
+                                    <div
+                                        className="absolute top-[2px] left-[2px] bg-white border border-gray-300 rounded-full h-5 w-5 transition-all
+                                    peer-checked:translate-x-[20px]"
+                                    />
                                 </div>
 
                                 <span className="ml-3 text-sm font-medium text-gray-700 flex items-center gap-1">
@@ -250,10 +265,10 @@ const InventarioPage = () => {
                                     />
                                     Stock Crítico
                                 </span>
-
                             </label>
                         </div>
                     </div>
+
                     <table className="w-full text-left">
                         <thead className="bg-gray-50 border-b border-gray-200">
                             <tr>
@@ -262,29 +277,29 @@ const InventarioPage = () => {
                                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase">Categoría</th>
                                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase text-center">Stock</th>
                                 <th className="px-6 py-3 text-xs font-medium text-gray-500 uppercase text-right">Precio Venta</th>
-
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-200">
 
+                        <tbody className="divide-y divide-gray-200">
                             {productosFiltrados.map((prod) => (
                                 <tr
                                     key={prod.id}
-                                    onDoubleClick={() => {
-                                        console.log("doble click", prod);
-                                        prepararEdicion(prod);
-                                    }}
-                                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                                    title="Doble clic para ver detalles o editar"
+                                    onClick={() => prepararEdicion(prod)}
+                                    className="cursor-pointer transition-colors hover:bg-blue-50 active:bg-blue-100"
+                                    title="Clic para ver detalles o editar"
                                 >
                                     <td className="px-6 py-4 text-sm font-mono text-gray-600">{prod.sku}</td>
                                     <td className="px-6 py-4 text-sm font-medium text-gray-900">{prod.nombre}</td>
-                                    <td className="px-6 py-4 text-sm text-gray-500">{prod.categoria_nombre || 'Sin categoría'}</td>
+                                    <td className="px-6 py-4 text-sm text-gray-500">
+                                        {prod.categoria_nombre || 'Sin categoría'}
+                                    </td>
                                     <td className="px-6 py-4 text-sm text-center">
-                                        <span className={`px-2 py-1 rounded-full text-xs font-bold ${prod.stock_actual <= prod.stock_minimo
-                                            ? 'bg-red-100 text-red-700'
-                                            : 'bg-green-100 text-green-700'
-                                            }`}>
+                                        <span
+                                            className={`px-2 py-1 rounded-full text-xs font-bold ${prod.stock_actual <= prod.stock_minimo
+                                                    ? 'bg-red-100 text-red-700'
+                                                    : 'bg-green-100 text-green-700'
+                                                }`}
+                                        >
                                             {prod.stock_actual}
                                         </span>
                                     </td>
@@ -307,16 +322,12 @@ const InventarioPage = () => {
                         className="bg-white rounded-xl p-8 max-w-lg w-full shadow-2xl relative"
                         onClick={(e) => e.stopPropagation()}
                     >
-
-                        {/* ✅ BOTÓN X */}
                         <button
                             onClick={() => { setIsModalOpen(false); setIsEditing(false); }}
                             className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
                         >
                             ✕
                         </button>
-
-
                         <h2 className="text-2xl font-bold mb-6 text-gray-800">
                             {isEditing ? 'Detalles del Producto' : 'Nuevo Producto'}
                         </h2>
@@ -338,8 +349,8 @@ const InventarioPage = () => {
                                         type="text"
                                         disabled={isEditing}
                                         required
-                                        className="w-full border p-2 rounded bg-gray-50 font-mono" // bg-gray-50 para indicar que está pre-llenado
-                                        value={nuevoProducto.sku} // Vinculamos al estado
+                                        className="w-full border p-2 rounded bg-gray-50 font-mono"
+                                        value={nuevoProducto.sku}
                                         onChange={(e) => setNuevoProducto({ ...nuevoProducto, sku: e.target.value })}
                                     />
                                 </div>
@@ -349,24 +360,107 @@ const InventarioPage = () => {
                                         autoFocus
                                         type="number"
                                         required
-                                        className="w-full border p-2 rounded bg-gray-50" // bg-gray-50 para indicar que está pre-llenado
-                                        value={nuevoProducto.stock_actual} // Vinculamos al estado
+                                        className="w-full border p-2 rounded bg-gray-50"
+                                        value={nuevoProducto.stock_actual}
                                         onChange={(e) => setNuevoProducto({ ...nuevoProducto, stock_actual: parseInt(e.target.value) })}
                                     />
                                 </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Categoría</label>
+                                <div className="col-span-2">
+                                    <label className="block text-sm font-medium text-gray-700 flex justify-between items-center">
+                                        <span>Categoría</span>
+                                        {!mostrarNuevaCategoria && (
+                                            <button
+                                                type="button"
+                                                onClick={() => setMostrarNuevaCategoria(true)}
+                                                className="text-blue-600 hover:underline text-xs font-bold"
+                                            >
+                                                + Nueva Categoría
+                                            </button>
+                                        )}
+                                    </label>
+
                                     <select
-                                        required
-                                        className="w-full border p-2 rounded"
+                                        className="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-500"
                                         value={nuevoProducto.categoria_id}
                                         onChange={(e) => setNuevoProducto({ ...nuevoProducto, categoria_id: e.target.value })}
                                     >
-                                        <option value="">Selecciona...</option>
+                                        <option value="">Seleccionar...</option>
                                         {categorias.map(cat => (
                                             <option key={cat.id} value={cat.id}>{cat.nombre}</option>
                                         ))}
                                     </select>
+
+                                    {mostrarNuevaCategoria && (
+                                        <div className="mt-3 border rounded-xl p-4 bg-gray-50 space-y-4">
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">Nombre</label>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-500"
+                                                        value={nuevaCategoria.nombre}
+                                                        onChange={(e) =>
+                                                            setNuevaCategoria({ ...nuevaCategoria, nombre: e.target.value })
+                                                        }
+                                                        placeholder="Nombre de la categoría"
+                                                    />
+                                                </div>
+
+                                                <div>
+                                                    <label className="block text-sm font-medium text-gray-700">Descripción</label>
+                                                    <input
+                                                        type="text"
+                                                        className="w-full border p-2 rounded outline-none focus:ring-2 focus:ring-blue-500"
+                                                        value={nuevaCategoria.descripcion}
+                                                        onChange={(e) =>
+                                                            setNuevaCategoria({ ...nuevaCategoria, descripcion: e.target.value })
+                                                        }
+                                                        placeholder="Descripción"
+                                                    />
+                                                </div>
+                                            </div>
+
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        setMostrarNuevaCategoria(false);
+                                                        setNuevaCategoria({ nombre: '', descripcion: '' });
+                                                    }}
+                                                    className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300"
+                                                >
+                                                    Cancelar
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={async () => {
+                                                        try {
+                                                            const res = await api.post('/categorias', {
+                                                                nombre: nuevaCategoria.nombre,
+                                                                descripcion: nuevaCategoria.descripcion
+                                                            });
+
+                                                            setCategorias([...categorias, res.data]);
+
+                                                            setNuevoProducto({
+                                                                ...nuevoProducto,
+                                                                categoria_id: res.data.id
+                                                            });
+
+                                                            setNuevaCategoria({ nombre: '', descripcion: '' });
+                                                            setMostrarNuevaCategoria(false);
+                                                        } catch (error) {
+                                                            alert('Error al crear la categoría');
+                                                        }
+                                                    }}
+                                                    className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
+                                                >
+                                                    Guardar categoría
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <label className="block text-sm font-medium text-gray-700">Precio Compra</label>
@@ -399,7 +493,6 @@ const InventarioPage = () => {
                             </div>
 
                             <div className="flex justify-between items-center mt-8 pt-4 border-t">
-                                {/* Botón Eliminar (Solo aparece si estamos editando) */}
                                 {isEditing ? (
                                     <button
                                         type="button"
@@ -427,56 +520,52 @@ const InventarioPage = () => {
                         </form>
                     </div>
                 </div>
-
-
             )}
-            {
-                isIngresoOpen && (
-                    <div className="fixed inset-0 bg-blue-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
-                        <div className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border-t-4 border-green-500">
-                            <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
-                                <Plus className="text-green-600" /> Ingreso de Bodega
-                            </h2>
-                            <p className="text-sm text-gray-500 mb-6">Escanea el código o digita el SKU</p>
+            {isIngresoOpen && (
+                <div className="fixed inset-0 bg-blue-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border-t-4 border-green-500">
+                        <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
+                            <Plus className="text-green-600" /> Ingreso de Bodega
+                        </h2>
+                        <p className="text-sm text-gray-500 mb-6">Escanea el código o digita el SKU</p>
 
-                            <form onSubmit={manejarIngresoBodega} className="space-y-4">
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">SKU del Producto</label>
-                                    <input
-                                        type="text"
-                                        autoFocus
-                                        required
-                                        className="w-full border-2 border-gray-200 p-3 rounded-lg focus:border-green-500 outline-none text-lg font-mono"
-                                        placeholder="Pistolear aquí..."
-                                        value={datosIngreso.sku}
-                                        onChange={(e) => setDatosIngreso({ ...datosIngreso, sku: e.target.value })}
-                                    />
-                                </div>
-                                <div>
-                                    <label className="block text-sm font-medium text-gray-700">Cantidad que ingresa</label>
-                                    <input
-                                        type="number"
-                                        min="1"
-                                        required
-                                        className="w-full border-2 border-gray-200 p-3 rounded-lg focus:border-green-500 outline-none text-lg"
-                                        value={datosIngreso.cantidad}
-                                        onChange={(e) => setDatosIngreso({ ...datosIngreso, cantidad: parseInt(e.target.value) })}
-                                    />
-                                </div>
+                        <form onSubmit={manejarIngresoBodega} className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">SKU del Producto</label>
+                                <input
+                                    type="text"
+                                    autoFocus
+                                    required
+                                    className="w-full border-2 border-gray-200 p-3 rounded-lg focus:border-green-500 outline-none text-lg font-mono"
+                                    placeholder="Pistolear aquí..."
+                                    value={datosIngreso.sku}
+                                    onChange={(e) => setDatosIngreso({ ...datosIngreso, sku: e.target.value })}
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Cantidad que ingresa</label>
+                                <input
+                                    type="number"
+                                    min="1"
+                                    required
+                                    className="w-full border-2 border-gray-200 p-3 rounded-lg focus:border-green-500 outline-none text-lg"
+                                    value={datosIngreso.cantidad}
+                                    onChange={(e) => setDatosIngreso({ ...datosIngreso, cantidad: parseInt(e.target.value) })}
+                                />
+                            </div>
 
-                                <div className="flex gap-2 pt-4">
-                                    <button type="button" onClick={() => setIsIngresoOpen(false)}
-                                        className="flex-1 py-3 text-gray-500 hover:bg-gray-100 rounded-lg">Cancelar</button>
-                                    <button type="submit"
-                                        className="flex-1 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700">
-                                        Cargar Stock
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                            <div className="flex gap-2 pt-4">
+                                <button type="button" onClick={() => setIsIngresoOpen(false)}
+                                    className="flex-1 py-3 text-gray-500 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                                <button type="submit"
+                                    className="flex-1 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700">
+                                    Cargar Stock
+                                </button>
+                            </div>
+                        </form>
                     </div>
-                )
-            }
+                </div>
+            )}
         </div >
     );
 };

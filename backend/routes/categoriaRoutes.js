@@ -16,6 +16,7 @@ router.post('/', async (req, res) => {
     }
 });
 
+
 router.get('/', async (req, res) => {
     try {
         const todasCategorias = await pool.query("SELECT * FROM categorias ORDER BY nombre ASC");
@@ -39,6 +40,30 @@ router.get('/:id', async (req, res) => {
     } catch (err) {
         console.error(err.message);
         res.status(500).send("Error en el servidor");
+    }
+});
+
+router.put('/:id', async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nombre, descripcion } = req.body;
+
+        const categoriaActualizada = await pool.query(
+            `UPDATE categorias
+             SET nombre = $1, descripcion = $2
+             WHERE id = $3
+             RETURNING *`,
+            [nombre, descripcion, id]
+        );
+
+        if (categoriaActualizada.rows.length === 0) {
+            return res.status(404).json({ mensaje: "Categoría no encontrada" });
+        }
+
+        res.json(categoriaActualizada.rows[0]);
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Error al actualizar categoría");
     }
 });
 module.exports = router;
