@@ -1,16 +1,32 @@
 import { useState } from 'react';
-import api from '../api/axios'; 
+import api from '../api/axios';
 import { useNavigate } from 'react-router-dom';
 
 const LoginPage = () => {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState(''); // Para mostrar el mensaje de "Credenciales inválidas"
+
+    // 1. Añade un estado para el modal
+    const [mostrarModalOlvide, setMostrarModalOlvide] = useState(false);
+    const [emailRecuperacion, setEmailRecuperacion] = useState('');
+
+    // 2. Función para manejar la solicitud
+    const handleRecuperar = async (e) => {
+        e.preventDefault();
+        try {
+            await api.post('/usuarios/recuperar-password', { email: emailRecuperacion });
+            alert("Si el correo coincide con nuestros registros, recibirás instrucciones.");
+            setMostrarModalOlvide(false);
+        } catch (err) {
+            alert("Error al procesar la solicitud.");
+        }
+    };
     const navigate = useNavigate();
     // 2. Función que se ejecuta al hacer clic en "Entrar"
     const handleLogin = async (e) => {
-        e.preventDefault(); 
-        setError(''); 
+        e.preventDefault();
+        setError('');
 
         try {
             // Enviamos los datos al backend (la ruta que hiciste ayer)
@@ -38,7 +54,7 @@ const LoginPage = () => {
         <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
             <div className="w-full max-w-md bg-white rounded-2xl shadow-xl p-8">
                 <form onSubmit={handleLogin}>
-                    
+
 
                     <h1 className="text-2xl font-bold text-center">
                         SmartStock-Manager
@@ -85,12 +101,12 @@ const LoginPage = () => {
 
                     {/* Opciones */}
                     <div className="flex justify-between items-center mb-4">
-                        <label className="flex items-center gap-2 text-sm text-gray-600">
-                            <input type="checkbox" />
-                            Recordarme
-                        </label>
 
-                        <button className="text-indigo-600 text-sm">
+                        <button
+                            type="button" // ¡Importante! que no sea submit
+                            onClick={() => setMostrarModalOlvide(true)}
+                            className="text-indigo-600 text-sm hover:underline"
+                        >
                             ¿Olvidaste tu contraseña?
                         </button>
                     </div>
@@ -103,15 +119,43 @@ const LoginPage = () => {
                         Iniciar Sesión
                     </button>
 
-                    {/* Registro */}
-                    <p className="text-center text-sm text-gray-600 mt-4">
-                        ¿No tienes una cuenta?{" "}
-                        <span className="text-indigo-600 cursor-pointer">
-                            Regístrate aquí
-                        </span>
-                    </p>
                 </form>
             </div>
+            {mostrarModalOlvide && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+                    <div className="bg-white rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+                        <h2 className="text-xl font-bold mb-2">Recuperar acceso</h2>
+                        <p className="text-sm text-gray-500 mb-4">
+                            Ingresa tu correo electrónico y te enviaremos los pasos para restablecer tu clave.
+                        </p>
+                        <form onSubmit={handleRecuperar}>
+                            <input
+                                type="email"
+                                required
+                                placeholder="tu@correo.com"
+                                className="w-full p-3 bg-gray-100 rounded-lg mb-4 outline-none focus:ring-2 focus:ring-indigo-500"
+                                value={emailRecuperacion}
+                                onChange={(e) => setEmailRecuperacion(e.target.value)}
+                            />
+                            <div className="flex gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setMostrarModalOlvide(false)}
+                                    className="flex-1 py-2 text-gray-500 font-medium"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="flex-1 py-2 bg-indigo-600 text-white rounded-lg font-medium"
+                                >
+                                    Enviar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };

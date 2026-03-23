@@ -1,5 +1,5 @@
 import { NavLink, useNavigate } from 'react-router-dom';
-import { LayoutDashboard, Package, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, LogOut, Users } from 'lucide-react';
 
 const Navbar = ({ usuario }) => {
     const navigate = useNavigate(); // ✅ ahora sí
@@ -53,6 +53,45 @@ const Navbar = ({ usuario }) => {
                     >
                         <Package size={18} />
                         Inventario
+                    </NavLink>
+                    <NavLink
+                        to="/usuarios"
+                        className={({ isActive }) =>
+                            `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                isActive
+                                    ? 'bg-blue-50 text-blue-600'
+                                    : 'text-gray-500 hover:bg-gray-100'
+                            }`
+                        }
+                    >
+                        <Users size={18} />
+                        Usuarios
+                    </NavLink>
+                    <NavLink
+                        to="/puntoventa"
+                        className={({ isActive }) =>
+                            `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                isActive
+                                    ? 'bg-blue-50 text-blue-600'
+                                    : 'text-gray-500 hover:bg-gray-100'
+                            }`
+                        }
+                    >
+                        <Users size={18} />
+                        Venta
+                    </NavLink>
+                    <NavLink
+                        to="/historialventas"
+                        className={({ isActive }) =>
+                            `flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                                isActive
+                                    ? 'bg-blue-50 text-blue-600'
+                                    : 'text-gray-500 hover:bg-gray-100'
+                            }`
+                        }
+                    >
+                        <Users size={18} />
+                        Historial ventas
                     </NavLink>
                 </div>
             </div>

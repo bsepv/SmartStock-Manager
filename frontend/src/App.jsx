@@ -2,6 +2,9 @@ import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom
 import LoginPage from './pages/LoginPage';
 import PanelControlPage from './pages/PanelControlPage';
 import InventarioPage from './pages/InventarioPage';
+import GestionUsuariosPage from './pages/GestionUsuariosPage';
+import PuntoVentaPage from './pages/PuntoVentaPage';
+import HistorialVentasPage from './pages/HistorialVentasPage';
 import Navbar from './components/Navbar';
 
 // Layout con Navbar
@@ -36,7 +39,10 @@ function App() {
           }
         >
           <Route path="/panelcontrol" element={<PanelControlPage />} />
+          <Route path="/puntoventa" element={<PuntoVentaPage />} />
           <Route path="/inventario" element={<InventarioPage />} />
+          <Route path="/historialventas" element={<HistorialVentasPage />} />
+          <Route path='/usuarios' element={<GestionUsuariosPage/>} />
         </Route>
 
         {/* Redirección */}
