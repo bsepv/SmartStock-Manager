@@ -16,8 +16,10 @@ const InventarioPage = () => {
         precio_compra: 0, precio_venta: 0, categoria_id: ''
     });
     //modal ingreso bodega
+    const [listaIngreso, setListaIngreso] = useState([]);
     const [isIngresoOpen, setIsIngresoOpen] = useState(false);
-    const [datosIngreso, setDatosIngreso] = useState({ sku: '', cantidad: 1 });
+    const [datosIngreso, setDatosIngreso] = useState({ sku: "" });
+
     //ingreo de bodega de producto inexistente
     const [skuNoExistente, setSkuNoExistente] = useState(null);
     //edicion de productos
@@ -74,43 +76,42 @@ const InventarioPage = () => {
         }
     }, [isModalOpen, skuNoExistente]);
 
-    //funcion para enviar el ingreso de bodega
-    const manejarIngresoBodega = async (e) => {
-        e.preventDefault();
-        try {
-            // Intentamos actualizar el stock del SKU
-            await api.put('/productos/ingreso-bodega', datosIngreso);
 
-            // Si tiene éxito, cerramos y recargamos
-            setIsIngresoOpen(false);
-            setDatosIngreso({ sku: '', cantidad: 1 });
-            window.location.reload();
+    // Función para buscar y agregar a la lista de recepción
+    const agregarAListaRecepcion = async (e) => {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            try {
+                const res = await api.get(`/productos/sku/${datosIngreso.sku}`);
+                const producto = res.data;
 
-        } catch (err) {
-            if (err.response && err.response.status === 404) {
-                // El producto no existe.
-                const quiereRegistrar = window.confirm(
-                    `El SKU "${datosIngreso.sku}" no existe. ¿Deseas registrarlo ahora con un stock inicial de ${datosIngreso.cantidad}?`
-                );
-
-                if (quiereRegistrar) {
-                    // 1. Guardamos los datos temporalmente
-                    setSkuNoExistente({
-                        sku: datosIngreso.sku,
-                        cantidad: datosIngreso.cantidad
-                    });
-
-                    // 2. Cerramos el modal de Ingreso
-                    setIsIngresoOpen(false);
-                    setDatosIngreso({ sku: '', cantidad: 1 }); // Limpiamos el form de ingreso
-
-                    // 3. Abrimos el modal de Nuevo Producto
-                    setIsModalOpen(true);
+                setListaIngreso(prev => {
+                    const existe = prev.find(p => p.id === producto.id);
+                    if (existe) {
+                        return prev.map(p => p.id === producto.id
+                            ? { ...p, cantidad: p.cantidad + 1 } : p);
+                    }
+                    return [...prev, { ...producto, cantidad: 1 }];
+                });
+                setDatosIngreso({ ...datosIngreso, sku: "" }); // Limpiar para el siguiente escaneo
+            } catch (err) {
+                if (window.confirm("Producto no encontrado. ¿Deseas crearlo?")) {
+                    setSkuNoExistente({ sku: datosIngreso.sku, cantidad: 1 });
+                    setIsIngresoOpen(false); 
+                    setIsModalOpen(true);   
                 }
-            } else {
-                // Otro tipo de error (ej: servidor caído)
-                alert("Error: " + (err.response?.data?.mensaje || "Problema de conexión"));
             }
+        }
+    };
+    const procesarCargaMasiva = async () => {
+        try {
+            await api.post('/productos/ingreso-masivo', { items: listaIngreso });
+            alert("Inventario actualizado con éxito");
+            setIsIngresoOpen(false);
+            setListaIngreso([]);
+            window.location.reload();
+        } catch (err) {
+            alert("Error al procesar la carga");
         }
     };
     //funcion de editar productos 
@@ -296,8 +297,8 @@ const InventarioPage = () => {
                                     <td className="px-6 py-4 text-sm text-center">
                                         <span
                                             className={`px-2 py-1 rounded-full text-xs font-bold ${prod.stock_actual <= prod.stock_minimo
-                                                    ? 'bg-red-100 text-red-700'
-                                                    : 'bg-green-100 text-green-700'
+                                                ? 'bg-red-100 text-red-700'
+                                                : 'bg-green-100 text-green-700'
                                                 }`}
                                         >
                                             {prod.stock_actual}
@@ -523,46 +524,68 @@ const InventarioPage = () => {
             )}
             {isIngresoOpen && (
                 <div className="fixed inset-0 bg-blue-900 bg-opacity-40 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-xl p-8 max-w-sm w-full shadow-2xl border-t-4 border-green-500">
-                        <h2 className="text-xl font-bold mb-2 flex items-center gap-2">
-                            <Plus className="text-green-600" /> Ingreso de Bodega
+                    <div className="bg-white rounded-xl p-6 max-w-2xl w-full shadow-2xl border-t-4 border-green-500 max-h-[90vh] flex flex-col">
+                        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                            <Plus className="text-green-600" /> Recepción de productos
                         </h2>
-                        <p className="text-sm text-gray-500 mb-6">Escanea el código o digita el SKU</p>
 
-                        <form onSubmit={manejarIngresoBodega} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">SKU del Producto</label>
-                                <input
-                                    type="text"
-                                    autoFocus
-                                    required
-                                    className="w-full border-2 border-gray-200 p-3 rounded-lg focus:border-green-500 outline-none text-lg font-mono"
-                                    placeholder="Pistolear aquí..."
-                                    value={datosIngreso.sku}
-                                    onChange={(e) => setDatosIngreso({ ...datosIngreso, sku: e.target.value })}
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700">Cantidad que ingresa</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    required
-                                    className="w-full border-2 border-gray-200 p-3 rounded-lg focus:border-green-500 outline-none text-lg"
-                                    value={datosIngreso.cantidad}
-                                    onChange={(e) => setDatosIngreso({ ...datosIngreso, cantidad: parseInt(e.target.value) })}
-                                />
-                            </div>
+                        {/* Input de escaneo rápido */}
+                        <div className="mb-4">
+                            <input
+                                type="text"
+                                autoFocus
+                                placeholder="Ingresa el codigo del producto..."
+                                className="w-full border-2 border-green-200 p-4 rounded-lg focus:border-green-500 outline-none text-lg font-mono"
+                                value={datosIngreso.sku}
+                                onChange={(e) => setDatosIngreso({ ...datosIngreso, sku: e.target.value })}
+                                onKeyDown={agregarAListaRecepcion}
+                            />
+                        </div>
 
-                            <div className="flex gap-2 pt-4">
-                                <button type="button" onClick={() => setIsIngresoOpen(false)}
-                                    className="flex-1 py-3 text-gray-500 hover:bg-gray-100 rounded-lg">Cancelar</button>
-                                <button type="submit"
-                                    className="flex-1 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700">
-                                    Cargar Stock
-                                </button>
-                            </div>
-                        </form>
+                        {/* Tabla de pre-carga */}
+                        <div className="flex-1 overflow-y-auto border rounded-lg mb-4">
+                            <table className="w-full text-left">
+                                <thead className="bg-gray-50 sticky top-0">
+                                    <tr>
+                                        <th className="p-3 text-sm font-bold">Producto</th>
+                                        <th className="p-3 text-sm font-bold w-24">Cantidad</th>
+                                        <th className="p-3 text-sm font-bold w-16"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y">
+                                    {listaIngreso.map((item, idx) => (
+                                        <tr key={idx}>
+                                            <td className="p-3 text-sm">{item.nombre}</td>
+                                            <td className="p-3">
+                                                <input
+                                                    type="number"
+                                                    value={item.cantidad}
+                                                    onChange={(e) => {
+                                                        const nuevaCant = parseInt(e.target.value);
+                                                        setListaIngreso(listaIngreso.map((p, i) => i === idx ? { ...p, cantidad: nuevaCant } : p));
+                                                    }}
+                                                    className="w-full border rounded p-1"
+                                                />
+                                            </td>
+                                            <td className="p-3">
+                                                <button onClick={() => setListaIngreso(listaIngreso.filter((_, i) => i !== idx))} className="text-red-500">×</button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div className="flex gap-2">
+                            <button onClick={() => { setIsIngresoOpen(false); setListaIngreso([]); }} className="flex-1 py-3 text-gray-500 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                            <button
+                                onClick={procesarCargaMasiva}
+                                disabled={listaIngreso.length === 0}
+                                className="flex-1 py-3 bg-green-600 text-white rounded-lg font-bold hover:bg-green-700 disabled:bg-gray-300"
+                            >
+                                Cargar {listaIngreso.reduce((acc, p) => acc + p.cantidad, 0)} Unidades
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}

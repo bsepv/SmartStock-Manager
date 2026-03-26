@@ -2,70 +2,78 @@ const express = require('express');
 const router = express.Router();
 const pool = require('../db');
 
+// --- 1. FINALIZAR VENTA ---
 router.post('/finalizar', async (req, res) => {
-    const { 
-        usuario_id, productos, metodo_pago, nro_voucher, 
-        total_neto, descuento_valor, total_final, ajustes_necesarios 
+    const {
+        usuario_id, productos, metodo_pago, nro_voucher,
+        total_neto, descuento_valor, total_final, ajustes_necesarios
     } = req.body;
 
-    const cliente = await pool.connect(); // Iniciamos conexión para transacción
+    const cliente = await pool.connect();
 
     try {
-        await cliente.query('BEGIN'); // Inicio de la transacción
+        await cliente.query('BEGIN');
 
-        // 1. Manejar Inconsistencias (Ajustes de entrada si el stock era 0)
+        // A. Manejar Inconsistencias
         if (ajustes_necesarios && ajustes_necesarios.length > 0) {
             for (let adj of ajustes_necesarios) {
-                // Registramos el ajuste de entrada para que el stock no sea negativo
                 await cliente.query(
                     "UPDATE productos SET stock_actual = stock_actual + $1 WHERE id = $2",
                     [adj.cantidad, adj.producto_id]
                 );
-                // Opcional: Registrar en una tabla de 'auditoria_ajustes'
-                console.log(`Ajuste automático por inconsistencia: Producto ${adj.producto_id} +${adj.cantidad}`);
+                await cliente.query(
+                    `INSERT INTO movimientos (producto_id, tipo, cantidad, motivo, usuario_id) 
+                     VALUES ($1, 'ENTRADA', $2, 'AJUSTE POR INCONSISTENCIA POS', $3)`,
+                    [adj.producto_id, adj.cantidad, usuario_id]
+                );
             }
         }
 
-        // 2. Registrar la Cabecera de la Venta
+        // B. Registrar la Venta
         const nuevaVenta = await cliente.query(
             `INSERT INTO ventas 
-            (usuario_id, metodo_pago, nro_voucher, total_neto, descuento_valor, total_final) 
-            VALUES ($1, $2, $3, $4, $5, $6) RETURNING id`,
+            (usuario_id, metodo_pago, nro_voucher, total_neto, descuento_valor, total_final, estado) 
+            VALUES ($1, $2, $3, $4, $5, $6, 'COMPLETADA') RETURNING id`,
             [usuario_id, metodo_pago, nro_voucher, total_neto, descuento_valor, total_final]
         );
         const ventaId = nuevaVenta.rows[0].id;
 
-        // 3. Registrar Detalles y Descontar Stock Real
+        // C. Procesar cada producto del carrito
         for (let prod of productos) {
-            // Insertar detalle
+            // 1. REGISTRAR DETALLE (¡Esto faltaba!)
             await cliente.query(
-                "INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, precio_unitario, subtotal) VALUES ($1, $2, $3, $4, $5)",
+                `INSERT INTO detalle_ventas (venta_id, producto_id, cantidad, precio_unitario, subtotal) 
+                 VALUES ($1, $2, $3, $4, $5)`,
                 [ventaId, prod.id, prod.cantidad, prod.precio, (prod.precio * prod.cantidad)]
             );
 
-            // Descontar Stock
-            const updateStock = await cliente.query(
-                "UPDATE productos SET stock_actual = stock_actual - $1 WHERE id = $2 RETURNING stock_actual",
+            // 2. DESCONTAR STOCK
+            await cliente.query(
+                "UPDATE productos SET stock_actual = stock_actual - $1 WHERE id = $2",
                 [prod.cantidad, prod.id]
             );
 
-            if (updateStock.rows[0].stock_actual < 0) {
-                throw new Error(`Stock insuficiente para el producto ${prod.nombre}`);
-            }
+            // 3. REGISTRAR MOVIMIENTO (Solo una vez)
+            await cliente.query(
+                `INSERT INTO movimientos (producto_id, tipo, cantidad, motivo, usuario_id, referencia_id) 
+                 VALUES ($1, 'SALIDA', $2, 'VENTA POS', $3, $4)`,
+                [prod.id, prod.cantidad, usuario_id, ventaId]
+            );
         }
 
-        await cliente.query('COMMIT'); // ¡Todo salió bien! Guardamos cambios
-        res.json({ mensaje: "Venta procesada con éxito", ventaId });
+        await cliente.query('COMMIT');
+        res.json({ mensaje: "Venta exitosa", ventaId });
 
     } catch (err) {
-        await cliente.query('ROLLBACK'); // Algo falló, deshacemos todo
-        console.error("Error en transacción de venta:", err.message);
+        await cliente.query('ROLLBACK');
+        console.error("ERROR CRÍTICO VENTA:", err.message);
         res.status(500).json({ error: err.message });
     } finally {
         cliente.release();
     }
 });
-// Obtener historial con filtros básicos
+
+// --- 2. HISTORIAL ---
 router.get('/historial', async (req, res) => {
     try {
         const { desde, hasta } = req.query;
@@ -91,32 +99,45 @@ router.get('/historial', async (req, res) => {
     }
 });
 
-// Anular Venta (Devuelve stock y marca como anulada)
+// --- 3. ANULAR VENTA ---
 router.post('/anular/:id', async (req, res) => {
     const { id } = req.params;
     const client = await pool.connect();
     try {
         await client.query('BEGIN');
 
-        // 1. Obtener los productos de esa venta para devolverlos al stock
-        const detalles = await client.query("SELECT producto_id, cantidad FROM detalle_ventas WHERE venta_id = $1", [id]);
+        // 1. Obtener detalles para devolver stock
+        const detalles = await client.query(
+            "SELECT producto_id, cantidad FROM detalle_ventas WHERE venta_id = $1", 
+            [id]
+        );
 
+        // 2. Devolver stock y registrar movimientos
         for (let item of detalles.rows) {
             await client.query(
                 "UPDATE productos SET stock_actual = stock_actual + $1 WHERE id = $2",
                 [item.cantidad, item.producto_id]
             );
+            
+            await client.query(
+                `INSERT INTO movimientos (producto_id, tipo, cantidad, motivo, referencia_id) 
+                 VALUES ($1, 'ENTRADA', $2, 'ANULACIÓN DE VENTA', $3)`,
+                [item.producto_id, item.cantidad, id]
+            );
         }
 
-        // 2. Marcar la venta como anulada (necesitarás una columna 'estado' en tu tabla ventas)
+        // 3. Marcar como anulada
         await client.query("UPDATE ventas SET estado = 'ANULADA', total_final = 0 WHERE id = $1", [id]);
 
         await client.query('COMMIT');
         res.json({ mensaje: "Venta anulada y stock restaurado" });
     } catch (err) {
         await client.query('ROLLBACK');
+        console.error("Error al anular:", err.message);
         res.status(500).send("Error al anular");
     } finally {
         client.release();
     }
 });
+
+module.exports = router;

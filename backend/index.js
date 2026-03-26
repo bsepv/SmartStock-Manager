@@ -4,6 +4,7 @@ const pool = require('./db');
 const categoriaRoutes = require('./routes/categoriaRoutes');
 const productoRoutes = require('./routes/productoRoutes');
 const usuarioRoutes = require('./routes/usuarioRoutes');
+const ventasRoutes = require('./routes/ventasRoutes');
 require('dotenv').config();
 
 const app = express();
@@ -16,6 +17,7 @@ app.use(express.json());
 app.use('/api/categorias', categoriaRoutes);
 app.use('/api/productos', productoRoutes);
 app.use('/api/usuarios', usuarioRoutes);
+app.use('/api/ventas', ventasRoutes);
 
 // Ruta de prueba
 app.get('/', (req, res) => {
